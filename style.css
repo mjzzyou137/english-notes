@@ -638,6 +638,22 @@ body {
 .history-item:hover .history-item-delete { opacity: 1; }
 .history-item-delete:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
 
+/* ===== BLUR ENGLISH TOGGLE ===== */
+#btnToggleBlur.active {
+  background: rgba(139,92,246,0.12);
+  border-color: rgba(139,92,246,0.35);
+}
+#btnToggleBlur.active svg { stroke: #a78bfa; }
+
+.history-list.blur-en .history-item-en {
+  filter: blur(5px);
+  user-select: none;
+  transition: filter 0.2s ease;
+}
+.history-list.blur-en .history-item-en:hover {
+  filter: blur(0);
+}
+
 .history-item-vi {
   font-size: 0.82rem;
   color: var(--vi-accent);
