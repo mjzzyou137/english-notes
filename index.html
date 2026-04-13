@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>English Practice</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Background blobs -->
+  <div class="bg-blob blob-1"></div>
+  <div class="bg-blob blob-2"></div>
+  <div class="bg-blob blob-3"></div>
+
+  <div class="app-wrapper">
+
+    <!-- LEFT COLUMN -->
+    <div class="left-col">
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-brand">
+        <span class="brand-icon">✦</span>
+        <h1 class="brand-title">English Practice</h1>
+      </div>
+      <div class="header-actions">
+        <button class="btn-practice" id="btnPractice" aria-label="Practice mode">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          <span>Practice</span>
+        </button>
+        <button class="btn-history" id="btnToggleHistory" aria-label="View history">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span>History</span>
+          <span class="history-badge" id="historyBadge">0</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN EDITOR -->
+    <main class="main-content" id="mainContent">
+
+      <!-- EDIT MODE BANNER -->
+      <div class="edit-banner" id="editBanner">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        <span>Editing saved note</span>
+        <button class="btn-new-note" id="btnNewNote">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          New note
+        </button>
+      </div>
+
+      <div class="editor-card">
+        <div class="editor-card-header">
+          <span class="lang-tag vi-tag">🇻🇳 Vietnamese</span>
+          <span class="char-count" id="viCount">0 characters</span>
+        </div>
+        <textarea
+          id="viText"
+          class="textarea"
+          placeholder="Enter your Vietnamese sentence here..."
+          spellcheck="false"
+        ></textarea>
+      </div>
+
+      <div class="swap-row">
+        <div class="divider-line"></div>
+        <button class="btn-swap" id="btnSwap" title="Swap content">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 16V4m0 0L3 8m4-4l4 4"/>
+            <path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
+          </svg>
+        </button>
+        <div class="divider-line"></div>
+      </div>
+
+      <div class="editor-card">
+        <div class="editor-card-header">
+          <span class="lang-tag en-tag">🇬🇧 English</span>
+          <span class="char-count" id="enCount">0 characters</span>
+        </div>
+        <textarea
+          id="enText"
+          class="textarea"
+          placeholder="Type your English translation here..."
+          spellcheck="true"
+          lang="en"
+        ></textarea>
+      </div>
+
+      <!-- ACTION BAR -->
+      <div class="action-bar">
+        <button class="btn-clear" id="btnClear">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+            <path d="M10 11v6"/><path d="M14 11v6"/>
+            <path d="M9 6V4h6v2"/>
+          </svg>
+          Clear
+        </button>
+        <button class="btn-save" id="btnSave">
+          <svg width="16" height="16" id="btnSaveIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+          </svg>
+          <span id="btnSaveLabel">Save</span>
+        </button>
+      </div>
+
+      <!-- TOAST -->
+      <div class="toast" id="toast"></div>
+    </main>
+
+    </div><!-- end .left-col -->
+
+    <!-- HISTORY PANEL -->
+    <aside class="history-panel" id="historyPanel">
+      <div class="history-header">
+        <h2 class="history-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Saved Notes
+        </h2>
+        <div class="history-actions">
+          <button class="btn-icon" id="btnImport" title="Import JSON">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </button>
+          <button class="btn-icon" id="btnExport" title="Export JSON">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </button>
+          <button class="btn-icon" id="btnCloseHistory" title="Close">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="history-search-wrap">
+        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" class="history-search" id="historySearch" placeholder="Search..." />
+      </div>
+
+      <div class="history-list" id="historyList">
+        <div class="history-empty" id="historyEmpty">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.3">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          <p>No notes saved yet</p>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- PRACTICE MODE OVERLAY -->
+  <div class="practice-overlay" id="practiceOverlay">
+
+    <div class="practice-header">
+      <div class="practice-meta">
+        <span class="practice-mode-tag">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          Practice Mode
+        </span>
+        <span class="practice-progress" id="practiceProgress">1 / 1</span>
+      </div>
+      <div class="practice-header-actions">
+        <button class="practice-btn-shuffle" id="btnShuffle" title="Shuffle">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+            <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+          </svg>
+          Shuffle
+        </button>
+        <button class="practice-btn-exit" id="btnExitPractice">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+          Exit
+        </button>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="practice-progress-bar-wrap">
+      <div class="practice-progress-bar" id="practiceProgressBar"></div>
+    </div>
+
+    <!-- Card -->
+    <div class="practice-stage">
+      <div class="practice-card" id="practiceCard">
+
+        <!-- Vietnamese -->
+        <div class="practice-card-section vi-section">
+          <div class="practice-section-label">
+            <span class="lang-tag vi-tag">🇻🇳 Vietnamese</span>
+          </div>
+          <p class="practice-vi-text" id="practiceViText"></p>
+        </div>
+
+        <!-- User input -->
+        <div class="practice-card-section user-input-section">
+          <div class="practice-section-label">
+            <span class="lang-tag en-tag">🇬🇧 Your translation</span>
+          </div>
+          <textarea
+            id="practiceUserInput"
+            class="practice-textarea"
+            placeholder="Type your English translation here..."
+            spellcheck="true"
+            lang="en"
+          ></textarea>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="practice-actions">
+          <button class="btn-check" id="btnCheck">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            Check
+          </button>
+          <button class="btn-reveal" id="btnReveal">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            Reveal answer
+          </button>
+        </div>
+
+        <!-- Diff result -->
+        <div class="practice-result" id="practiceResult">
+          <div class="practice-result-header">
+            <span class="practice-result-score" id="practiceResultScore"></span>
+            <button class="btn-try-again" id="btnTryAgain">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="1 4 1 10 7 10"/>
+                <path d="M3.51 15a9 9 0 1 0 .49-3.29"/>
+              </svg>
+              Try again
+            </button>
+          </div>
+          <div class="practice-diff" id="practiceDiff"></div>
+          <div class="practice-diff-legend">
+            <span class="legend-item legend-correct">
+              <span class="legend-dot"></span>Correct
+            </span>
+            <span class="legend-item legend-wrong">
+              <span class="legend-dot"></span>Missing / wrong
+            </span>
+            <span class="legend-item legend-extra">
+              <span class="legend-dot"></span>Extra
+            </span>
+          </div>
+        </div>
+
+        <!-- Reference answer (revealed) -->
+        <div class="practice-card-section en-section" id="practiceEnSection">
+          <div class="practice-section-label">
+            <span class="lang-tag en-tag">🇬🇧 Answer</span>
+          </div>
+          <p class="practice-en-text" id="practiceEnText"></p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="practice-nav">
+      <button class="practice-nav-btn" id="btnPracticePrev">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Prev
+      </button>
+      <button class="practice-nav-btn practice-nav-next" id="btnPracticeNext">
+        Next
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Empty state -->
+    <div class="practice-empty" id="practiceEmpty">
+      <div class="practice-empty-icon">📝</div>
+      <h3>No notes to practice</h3>
+      <p>Save some notes first, then come back to practice.</p>
+      <button class="practice-btn-exit-empty" id="btnExitPracticeEmpty">Go back</button>
+    </div>
+
+  </div>
+
+  <input type="file" id="importFileInput" accept=".json,application/json" style="display:none" />
+  <script src="app.js"></script>
+</body>
+</html>
