@@ -1,7 +1,40 @@
-/* ===== STATE ===== */
-const STORAGE_KEY = 'english_practice_notes';
+/* ===== API ===== */
+const API_BASE = 'https://69dd15f484f912a26404c475.mockapi.io/english-notes/histories';
 
-let notes      = loadNotes();
+async function apiGetAll() {
+  const res = await fetch(API_BASE);
+  if (!res.ok) throw new Error('Failed to fetch notes');
+  const data = await res.json();
+  return data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
+async function apiCreate(vi, en) {
+  const res = await fetch(API_BASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vi, en }),
+  });
+  if (!res.ok) throw new Error('Failed to create note');
+  return res.json();
+}
+
+async function apiUpdate(id, vi, en) {
+  const res = await fetch(`${API_BASE}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vi, en }),
+  });
+  if (!res.ok) throw new Error('Failed to update note');
+  return res.json();
+}
+
+async function apiDelete(id) {
+  const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete note');
+}
+
+/* ===== STATE ===== */
+let notes       = [];
 let historyOpen = true;
 let searchQuery = '';
 let editingId   = null;
@@ -21,6 +54,7 @@ const btnSwap          = document.getElementById('btnSwap');
 const btnPractice      = document.getElementById('btnPractice');
 const btnToggleHistory = document.getElementById('btnToggleHistory');
 const btnCloseHistory  = document.getElementById('btnCloseHistory');
+const historyLoading   = document.getElementById('historyLoading');
 const btnImport        = document.getElementById('btnImport');
 const btnExport        = document.getElementById('btnExport');
 const importFileInput  = document.getElementById('importFileInput');
@@ -31,17 +65,10 @@ const historyBadge     = document.getElementById('historyBadge');
 const historySearch    = document.getElementById('historySearch');
 const toast            = document.getElementById('toast');
 
-/* ===== LOCAL STORAGE ===== */
-function loadNotes() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-  } catch {
-    return [];
-  }
-}
-
-function saveNotes() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+/* ===== LOADING STATE ===== */
+function setLoading(loading) {
+  btnSave.disabled = loading;
+  btnSave.style.opacity = loading ? '0.6' : '';
 }
 
 /* ===== CHAR COUNTER ===== */
@@ -56,7 +83,7 @@ viText.addEventListener('input', updateCounters);
 enText.addEventListener('input', updateCounters);
 
 /* ===== SAVE / UPDATE NOTE ===== */
-btnSave.addEventListener('click', () => {
+btnSave.addEventListener('click', async () => {
   const vi = viText.value.trim();
   const en = enText.value.trim();
 
@@ -65,46 +92,49 @@ btnSave.addEventListener('click', () => {
     return;
   }
 
+  // UPDATE existing note
   if (editingId !== null) {
-    const idx = notes.findIndex(n => n.id === editingId);
-    if (idx !== -1) {
-      notes[idx].vi = vi;
-      notes[idx].en = en;
-      notes[idx].updatedAt = new Date().toISOString();
-      saveNotes();
+    setLoading(true);
+    try {
+      const updated = await apiUpdate(editingId, vi, en);
+      const idx = notes.findIndex(n => n.id === editingId);
+      if (idx !== -1) notes[idx] = { ...notes[idx], ...updated };
       renderHistory();
       showToast('✓ Note updated!');
+      exitEditMode();
+    } catch {
+      showToast('Failed to update note.', 'error');
+    } finally {
+      setLoading(false);
     }
-    exitEditMode();
     return;
   }
 
+  // Duplicate check
   const duplicate = notes.find(n => n.vi.trim() === vi);
   if (duplicate) {
     showToast('A note with this Vietnamese text already exists.', 'error');
     return;
   }
 
-  const note = {
-    id: Date.now(),
-    vi,
-    en,
-    createdAt: new Date().toISOString(),
-  };
-
-  notes.unshift(note);
-  saveNotes();
-  renderHistory();
-  updateBadge();
-
-  viText.value = '';
-  enText.value = '';
-  updateCounters();
-
-  showToast('✓ Note saved!');
-
-  historyBadge.style.transform = 'scale(1.4)';
-  setTimeout(() => { historyBadge.style.transform = ''; }, 300);
+  // CREATE new note
+  setLoading(true);
+  try {
+    const created = await apiCreate(vi, en);
+    notes.unshift(created);
+    renderHistory();
+    updateBadge();
+    viText.value = '';
+    enText.value = '';
+    updateCounters();
+    showToast('✓ Note saved!');
+    historyBadge.style.transform = 'scale(1.4)';
+    setTimeout(() => { historyBadge.style.transform = ''; }, 300);
+  } catch {
+    showToast('Failed to save note.', 'error');
+  } finally {
+    setLoading(false);
+  }
 });
 
 /* ===== EDIT MODE ===== */
@@ -150,11 +180,9 @@ btnSwap.addEventListener('click', () => {
 
 /* ===== HISTORY TOGGLE ===== */
 btnToggleHistory.addEventListener('click', () => toggleHistory(true));
-btnCloseHistory.addEventListener('click', () => toggleHistory(false));
+btnCloseHistory.addEventListener('click',  () => toggleHistory(false));
 
-function isMobile() {
-  return window.innerWidth <= 900;
-}
+function isMobile() { return window.innerWidth <= 900; }
 
 function toggleHistory(open) {
   historyOpen = open;
@@ -179,20 +207,13 @@ historySearch.addEventListener('input', (e) => {
 function renderHistory() {
   const filtered = notes.filter(n => {
     if (!searchQuery) return true;
-    return (
-      n.vi.toLowerCase().includes(searchQuery) ||
-      n.en.toLowerCase().includes(searchQuery)
-    );
+    return n.vi.toLowerCase().includes(searchQuery) ||
+           n.en.toLowerCase().includes(searchQuery);
   });
 
   historyEmpty.style.display = filtered.length === 0 ? 'flex' : 'none';
-
   [...historyList.querySelectorAll('.history-item')].forEach(el => el.remove());
-
-  filtered.forEach((note, idx) => {
-    const item = buildHistoryItem(note, idx);
-    historyList.appendChild(item);
-  });
+  filtered.forEach((note, idx) => historyList.appendChild(buildHistoryItem(note, idx)));
 }
 
 function buildHistoryItem(note, idx) {
@@ -235,24 +256,35 @@ function buildHistoryItem(note, idx) {
   return item;
 }
 
-function deleteNote(id, el) {
+async function deleteNote(id, el) {
   el.style.transition = 'all 0.25s ease';
   el.style.opacity    = '0';
   el.style.transform  = 'translateX(20px)';
   el.style.maxHeight  = el.offsetHeight + 'px';
   setTimeout(() => {
-    el.style.maxHeight   = '0';
+    el.style.maxHeight    = '0';
     el.style.marginBottom = '0';
-    el.style.padding     = '0';
+    el.style.padding      = '0';
   }, 200);
-  setTimeout(() => {
-    notes = notes.filter(n => n.id !== id);
-    saveNotes();
-    el.remove();
-    updateBadge();
-    if (notes.length === 0) historyEmpty.style.display = 'flex';
-    if (editingId === id) exitEditMode();
-    showToast('Note deleted.');
+
+  setTimeout(async () => {
+    try {
+      await apiDelete(id);
+      notes = notes.filter(n => n.id !== id);
+      el.remove();
+      updateBadge();
+      if (notes.length === 0) historyEmpty.style.display = 'flex';
+      if (editingId === id) exitEditMode();
+      showToast('Note deleted.');
+    } catch {
+      el.style.transition = '';
+      el.style.opacity    = '1';
+      el.style.transform  = '';
+      el.style.maxHeight  = '';
+      el.style.padding    = '';
+      el.style.marginBottom = '';
+      showToast('Failed to delete note.', 'error');
+    }
   }, 420);
 }
 
@@ -262,81 +294,68 @@ btnExport.addEventListener('click', () => {
     showToast('No notes to export.', 'error');
     return;
   }
-
-  const data    = notes.map(n => ({ vi: n.vi, en: n.en }));
-  const json    = JSON.stringify(data, null, 2);
-  const blob    = new Blob([json], { type: 'application/json' });
-  const url     = URL.createObjectURL(blob);
-  const a       = document.createElement('a');
-  const date    = new Date().toISOString().slice(0, 10);
-  a.href        = url;
-  a.download    = `english-notes-${date}.json`;
+  const data  = notes.map(n => ({ vi: n.vi, en: n.en }));
+  const json  = JSON.stringify(data, null, 2);
+  const blob  = new Blob([json], { type: 'application/json' });
+  const url   = URL.createObjectURL(blob);
+  const a     = document.createElement('a');
+  const date  = new Date().toISOString().slice(0, 10);
+  a.href      = url;
+  a.download  = `english-notes-${date}.json`;
   a.click();
   URL.revokeObjectURL(url);
-
   showToast(`✓ Exported ${notes.length} note${notes.length > 1 ? 's' : ''}.`);
 });
 
 /* ===== IMPORT ===== */
 btnImport.addEventListener('click', () => importFileInput.click());
 
-importFileInput.addEventListener('change', (e) => {
+importFileInput.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = (ev) => {
+  reader.onload = async (ev) => {
     try {
       const parsed = JSON.parse(ev.target.result);
-
       if (!Array.isArray(parsed)) throw new Error('Not an array');
 
-      const valid = parsed.filter(item =>
-        item && typeof item === 'object' &&
-        (typeof item.vi === 'string' || typeof item.en === 'string')
+      const existingVi = new Set(notes.map(n => n.vi.trim()));
+      const toImport   = parsed.filter(item => {
+        const v = (item.vi || '').trim();
+        if (!v || existingVi.has(v)) return false;
+        existingVi.add(v);
+        return true;
+      });
+
+      const skipped = parsed.length - toImport.length;
+
+      if (toImport.length === 0) {
+        showToast('All notes already exist (duplicates skipped).', 'error');
+        importFileInput.value = '';
+        return;
+      }
+
+      showToast(`Importing ${toImport.length} note${toImport.length > 1 ? 's' : ''}…`);
+
+      const created = await Promise.all(
+        toImport.map(item => apiCreate(item.vi || '', item.en || ''))
       );
 
-      if (valid.length === 0) {
-        showToast('No valid notes found in file.', 'error');
-        return;
-      }
+      notes = [...created, ...notes].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
 
-      const existingVi = new Set(notes.map(n => n.vi.trim()));
-
-      const imported = valid
-        .filter(item => {
-          const viVal = (item.vi || '').trim();
-          if (!viVal || existingVi.has(viVal)) return false;
-          existingVi.add(viVal);
-          return true;
-        })
-        .map(item => ({
-          id: Date.now() + Math.random(),
-          vi: item.vi || '',
-          en: item.en || '',
-          createdAt: new Date().toISOString(),
-        }));
-
-      const skipped = valid.length - imported.length;
-
-      if (imported.length === 0) {
-        showToast('All notes already exist (duplicates skipped).', 'error');
-        return;
-      }
-
-      notes = [...imported, ...notes];
-      saveNotes();
       renderHistory();
       updateBadge();
 
       const msg = skipped > 0
-        ? `✓ Imported ${imported.length} note${imported.length > 1 ? 's' : ''} (${skipped} duplicate${skipped > 1 ? 's' : ''} skipped).`
-        : `✓ Imported ${imported.length} note${imported.length > 1 ? 's' : ''}.`;
+        ? `✓ Imported ${created.length} note${created.length > 1 ? 's' : ''} (${skipped} duplicate${skipped > 1 ? 's' : ''} skipped).`
+        : `✓ Imported ${created.length} note${created.length > 1 ? 's' : ''}.`;
       showToast(msg);
-    } catch {
-      showToast('Invalid JSON file.', 'error');
+    } catch (err) {
+      showToast(err.message.startsWith('Failed') ? err.message : 'Invalid JSON file.', 'error');
     }
-
     importFileInput.value = '';
   };
   reader.readAsText(file);
@@ -354,20 +373,18 @@ function showToast(msg, type = 'success') {
   void toast.offsetWidth;
   toast.classList.add('show');
   clearTimeout(toast._timer);
-  toast._timer = setTimeout(() => toast.classList.remove('show'), 2600);
+  toast._timer = setTimeout(() => toast.classList.remove('show'), 2800);
 }
 
 function formatDate(iso) {
-  const d      = new Date(iso);
-  const now    = new Date();
+  const d       = new Date(iso);
+  const now     = new Date();
   const diffMs  = now - d;
   const diffMin = Math.floor(diffMs / 60000);
   const diffH   = Math.floor(diffMs / 3600000);
-
   if (diffMin < 1)  return 'Just now';
   if (diffMin < 60) return `${diffMin} minute${diffMin > 1 ? 's' : ''} ago`;
   if (diffH < 24)   return `${diffH} hour${diffH > 1 ? 's' : ''} ago`;
-
   return d.toLocaleDateString('en-US', {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
@@ -377,16 +394,14 @@ function formatDate(iso) {
 function highlight(text) {
   if (!searchQuery) return escapeHtml(text);
   const escaped = escapeHtml(text);
-  const re      = new RegExp(`(${escapeRegex(searchQuery)})`, 'gi');
+  const re = new RegExp(`(${escapeRegex(searchQuery)})`, 'gi');
   return escaped.replace(re, '<span class="highlight">$1</span>');
 }
 
 function escapeHtml(str) {
   return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function escapeRegex(str) {
@@ -423,7 +438,6 @@ let isShuffled    = false;
 
 function openPractice() {
   if (notes.length === 0) {
-    practiceQueue = [];
     practiceStage.classList.add('hidden');
     practiceNav.classList.add('hidden');
     practiceEmpty.classList.add('visible');
@@ -448,7 +462,6 @@ function closePractice() {
 
 function renderPracticeCard(direction = 'none') {
   const note = practiceQueue[practiceIdx];
-
   if (direction !== 'none') {
     practiceCard.style.transition = 'opacity 0.15s ease, transform 0.15s ease';
     practiceCard.style.opacity    = '0';
@@ -467,45 +480,38 @@ function renderPracticeCard(direction = 'none') {
 function fillCard(note) {
   practiceViText.textContent = note.vi || '(empty)';
   practiceEnText.textContent = note.en || '(empty)';
-
-  practiceUserInput.value = '';
+  practiceUserInput.value    = '';
   practiceEnSection.classList.remove('revealed');
   practiceResult.classList.remove('visible');
   practiceDiff.innerHTML = '';
   btnReveal.classList.remove('revealed');
   btnReveal.innerHTML = `
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-      <circle cx="12" cy="12" r="3"/>
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
     </svg>
     Reveal answer`;
-
   const current = practiceIdx + 1;
   const total   = practiceQueue.length;
-  practiceProgress.textContent        = `${current} / ${total}`;
-  practiceProgressBar.style.width     = `${(current / total) * 100}%`;
-  btnPracticePrev.disabled            = practiceIdx === 0;
-  btnPracticeNext.disabled            = practiceIdx === practiceQueue.length - 1;
-
+  practiceProgress.textContent    = `${current} / ${total}`;
+  practiceProgressBar.style.width = `${(current / total) * 100}%`;
+  btnPracticePrev.disabled        = practiceIdx === 0;
+  btnPracticeNext.disabled        = practiceIdx === practiceQueue.length - 1;
   setTimeout(() => practiceUserInput.focus(), 200);
 }
 
 /* ===== DIFF / CHECK ===== */
 function lcs(a, b) {
-  const m  = a.length, n = b.length;
+  const m = a.length, n = b.length;
   const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
   for (let i = 1; i <= m; i++)
     for (let j = 1; j <= n; j++)
-      dp[i][j] = a[i-1] === b[j-1]
-        ? dp[i-1][j-1] + 1
-        : Math.max(dp[i-1][j], dp[i][j-1]);
-
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
   const result = [];
   let i = m, j = n;
   while (i > 0 && j > 0) {
-    if (a[i-1] === b[j-1])            { result.unshift({ type: 'match', val: a[i-1] }); i--; j--; }
+    if (a[i-1] === b[j-1])             { result.unshift({ type: 'match', val: a[i-1] }); i--; j--; }
     else if (dp[i-1][j] >= dp[i][j-1]) { result.unshift({ type: 'del',   val: a[i-1] }); i--; }
-    else                               { result.unshift({ type: 'ins',   val: b[j-1] }); j--; }
+    else                                { result.unshift({ type: 'ins',   val: b[j-1] }); j--; }
   }
   while (i > 0) { result.unshift({ type: 'del', val: a[i-1] }); i--; }
   while (j > 0) { result.unshift({ type: 'ins', val: b[j-1] }); j--; }
@@ -519,45 +525,29 @@ function tokenize(text) {
 function runCheck() {
   const answer   = practiceEnText.textContent;
   const userText = practiceUserInput.value.trim();
-
   if (!userText) {
     practiceUserInput.focus();
     practiceUserInput.classList.add('shake');
     setTimeout(() => practiceUserInput.classList.remove('shake'), 400);
     return;
   }
-
-  const answerTokens = tokenize(answer);
-  const userTokens   = tokenize(userText);
-  const diff         = lcs(answerTokens, userTokens);
-
-  let correctCount = 0;
-  let html         = '';
-
+  const diff   = lcs(tokenize(answer), tokenize(userText));
+  let correct  = 0, html = '';
   diff.forEach(d => {
     const w = escapeHtml(d.val);
-    if (d.type === 'match') {
-      correctCount++;
-      html += `<span class="word-correct">${w}</span> `;
-    } else if (d.type === 'del') {
-      html += `<span class="word-wrong">${w}</span> `;
-    } else {
-      html += `<span class="word-extra">${w}</span> `;
-    }
+    if      (d.type === 'match') { correct++; html += `<span class="word-correct">${w}</span> `; }
+    else if (d.type === 'del')   { html += `<span class="word-wrong">${w}</span> `; }
+    else                         { html += `<span class="word-extra">${w}</span> `; }
   });
-
-  const total = answerTokens.length;
-  const pct   = total > 0 ? Math.round((correctCount / total) * 100) : 100;
+  const total = tokenize(answer).length;
+  const pct   = total > 0 ? Math.round((correct / total) * 100) : 100;
   const cls   = pct >= 80 ? 'score-good' : pct >= 50 ? 'score-mid' : 'score-bad';
   const emoji = pct >= 80 ? '🎉' : pct >= 50 ? '🙂' : '💪';
-
   practiceResultScore.innerHTML =
     `${emoji} Score: <span class="score-num ${cls}">${pct}%</span>` +
-    `<span style="color:var(--text-muted);font-weight:400;margin-left:6px">(${correctCount}/${total} words)</span>`;
-
+    `<span style="color:var(--text-muted);font-weight:400;margin-left:6px">(${correct}/${total} words)</span>`;
   practiceDiff.innerHTML = html;
   practiceResult.classList.add('visible');
-
   practiceEnSection.classList.add('revealed');
   btnReveal.classList.add('revealed');
   btnReveal.innerHTML = `
@@ -576,8 +566,7 @@ btnTryAgain.addEventListener('click', () => {
   btnReveal.classList.remove('revealed');
   btnReveal.innerHTML = `
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-      <circle cx="12" cy="12" r="3"/>
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
     </svg>
     Reveal answer`;
   practiceUserInput.value = '';
@@ -585,14 +574,13 @@ btnTryAgain.addEventListener('click', () => {
 });
 
 btnReveal.addEventListener('click', () => {
-  const isRevealed = practiceEnSection.classList.contains('revealed');
-  if (isRevealed) {
+  const revealed = practiceEnSection.classList.contains('revealed');
+  if (revealed) {
     practiceEnSection.classList.remove('revealed');
     btnReveal.classList.remove('revealed');
     btnReveal.innerHTML = `
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-        <circle cx="12" cy="12" r="3"/>
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
       </svg>
       Reveal answer`;
   } else {
@@ -608,30 +596,21 @@ btnReveal.addEventListener('click', () => {
 });
 
 btnPracticeNext.addEventListener('click', () => {
-  if (practiceIdx < practiceQueue.length - 1) {
-    practiceIdx++;
-    renderPracticeCard('next');
-  }
+  if (practiceIdx < practiceQueue.length - 1) { practiceIdx++; renderPracticeCard('next'); }
 });
-
 btnPracticePrev.addEventListener('click', () => {
-  if (practiceIdx > 0) {
-    practiceIdx--;
-    renderPracticeCard('prev');
-  }
+  if (practiceIdx > 0) { practiceIdx--; renderPracticeCard('prev'); }
 });
 
 btnShuffle.addEventListener('click', () => {
   isShuffled = !isShuffled;
   btnShuffle.classList.toggle('shuffled', isShuffled);
+  practiceQueue = [...notes];
   if (isShuffled) {
-    practiceQueue = [...notes];
     for (let i = practiceQueue.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [practiceQueue[i], practiceQueue[j]] = [practiceQueue[j], practiceQueue[i]];
     }
-  } else {
-    practiceQueue = [...notes];
   }
   practiceIdx = 0;
   renderPracticeCard();
@@ -644,28 +623,31 @@ btnExitPracticeEmpty.addEventListener('click', closePractice);
 /* ===== KEYBOARD SHORTCUTS ===== */
 document.addEventListener('keydown', (e) => {
   if (practiceOverlay.classList.contains('open')) {
-    if (e.key === 'Escape')                        { closePractice(); return; }
-    if (e.key === 'ArrowRight')                    { btnPracticeNext.click(); return; }
-    if (e.key === 'ArrowLeft')                     { btnPracticePrev.click(); return; }
+    if (e.key === 'Escape')    { closePractice(); return; }
+    if (e.key === 'ArrowRight') { btnPracticeNext.click(); return; }
+    if (e.key === 'ArrowLeft')  { btnPracticePrev.click(); return; }
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      if (!practiceResult.classList.contains('visible')) runCheck();
-      else btnPracticeNext.click();
+      practiceResult.classList.contains('visible') ? btnPracticeNext.click() : runCheck();
       return;
     }
     return;
   }
-
-  if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-    e.preventDefault();
-    btnSave.click();
-  }
-  if (e.key === 'Escape' && historyOpen) {
-    toggleHistory(false);
-  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); btnSave.click(); }
+  if (e.key === 'Escape' && historyOpen) toggleHistory(false);
 });
 
 /* ===== INIT ===== */
-updateBadge();
-updateCounters();
-renderHistory();
+(async () => {
+  historyLoading.classList.add('visible');
+  historyEmpty.style.display = 'none';
+  try {
+    notes = await apiGetAll();
+  } catch {
+    showToast('Could not connect to server.', 'error');
+  }
+  historyLoading.classList.remove('visible');
+  updateBadge();
+  updateCounters();
+  renderHistory();
+})();
