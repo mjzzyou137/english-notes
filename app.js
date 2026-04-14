@@ -551,7 +551,10 @@ function fillCard(note) {
   practiceProgressBar.style.width = `${(current / total) * 100}%`;
   btnPracticePrev.disabled        = practiceIdx === 0;
   btnPracticeNext.disabled        = practiceIdx === practiceQueue.length - 1;
-  setTimeout(() => practiceUserInput.focus(), 200);
+  setTimeout(() => {
+    practiceUserInput.focus();
+    practiceUserInput.scrollIntoView({ block: 'nearest' });
+  }, 200);
 }
 
 /* ===== DIFF / CHECK ===== */
@@ -661,10 +664,18 @@ btnReveal.addEventListener('click', () => {
 });
 
 btnPracticeNext.addEventListener('click', () => {
-  if (practiceIdx < practiceQueue.length - 1) { practiceIdx++; renderPracticeCard('next'); }
+  if (practiceIdx < practiceQueue.length - 1) {
+    practiceIdx++;
+    practiceUserInput.focus();
+    renderPracticeCard('next');
+  }
 });
 btnPracticePrev.addEventListener('click', () => {
-  if (practiceIdx > 0) { practiceIdx--; renderPracticeCard('prev'); }
+  if (practiceIdx > 0) {
+    practiceIdx--;
+    practiceUserInput.focus();
+    renderPracticeCard('prev');
+  }
 });
 
 btnShuffle.addEventListener('click', () => {
