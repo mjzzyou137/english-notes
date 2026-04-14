@@ -83,6 +83,28 @@ function updateCounters() {
 viText.addEventListener('input', updateCounters);
 enText.addEventListener('input', updateCounters);
 
+// Tab in viText → jump to enText
+viText.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    enText.focus();
+  }
+});
+
+// Cmd+Enter → save
+viText.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    btnSave.click();
+  }
+});
+enText.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    btnSave.click();
+  }
+});
+
 /* ===== SAVE / UPDATE NOTE ===== */
 btnSave.addEventListener('click', async () => {
   const vi = viText.value.trim();
@@ -246,18 +268,34 @@ function buildHistoryItem(note, idx) {
   item.innerHTML = `
     <div class="history-item-time">
       <span>${dt}</span>
-      <button class="history-item-delete" title="Delete this note">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="history-item-edit" title="Load into editor">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </button>
+        <button class="history-item-delete" title="Delete this note">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
     </div>
     <div class="history-item-vi">${viHtml}</div>
     <div class="history-item-en">${enHtml}</div>
   `;
 
+  // Click on item body → toggle expand
   item.addEventListener('click', (e) => {
     if (e.target.closest('.history-item-delete')) return;
+    if (e.target.closest('.history-item-edit')) return;
+    item.classList.toggle('expanded');
+  });
+
+  // Edit button → load into editor
+  item.querySelector('.history-item-edit').addEventListener('click', (e) => {
+    e.stopPropagation();
     viText.value = note.vi;
     enText.value = note.en;
     updateCounters();
@@ -577,6 +615,16 @@ function runCheck() {
 
 btnCheck.addEventListener('click', runCheck);
 
+practiceUserInput.addEventListener('input', () => {
+  if (practiceResult.classList.contains('visible')) return;
+  const answer   = practiceEnText.textContent.trim().toLowerCase().replace(/\s+/g, ' ');
+  const userText = practiceUserInput.value.trim().toLowerCase().replace(/\s+/g, ' ');
+  if (userText && userText === answer) {
+    runCheck();
+    setTimeout(() => btnPracticeNext.focus(), 50);
+  }
+});
+
 btnTryAgain.addEventListener('click', () => {
   practiceResult.classList.remove('visible');
   practiceEnSection.classList.remove('revealed');
@@ -641,8 +689,8 @@ btnExitPracticeEmpty.addEventListener('click', closePractice);
 document.addEventListener('keydown', (e) => {
   if (practiceOverlay.classList.contains('open')) {
     if (e.key === 'Escape')    { closePractice(); return; }
-    if (e.key === 'ArrowRight') { btnPracticeNext.click(); return; }
-    if (e.key === 'ArrowLeft')  { btnPracticePrev.click(); return; }
+    if (e.key === 'ArrowRight' && document.activeElement !== practiceUserInput) { btnPracticeNext.click(); return; }
+    if (e.key === 'ArrowLeft'  && document.activeElement !== practiceUserInput) { btnPracticePrev.click(); return; }
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       practiceResult.classList.contains('visible') ? btnPracticeNext.click() : runCheck();

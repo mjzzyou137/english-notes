@@ -578,36 +578,28 @@ body {
 .history-item {
   background: var(--surface);
   border: 1px solid var(--border);
+  border-left: 3px solid transparent;
   border-radius: var(--radius-sm);
   padding: 14px 16px;
   cursor: pointer;
-  transition: all var(--transition);
-  position: relative;
-  overflow: hidden;
+  transition: background var(--transition), border-color var(--transition), transform var(--transition), box-shadow var(--transition);
   animation: slideInItem 0.3s ease both;
-}
-.history-item::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 3px;
-  background: linear-gradient(to bottom, var(--vi-accent), var(--en-accent));
-  opacity: 0;
-  transition: opacity var(--transition);
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
 }
 .history-item:hover {
   background: var(--surface-hover);
   border-color: rgba(255,255,255,0.12);
+  border-left-color: var(--vi-accent);
   transform: translateX(-2px);
 }
-.history-item:hover::before { opacity: 1; }
-
 .history-item.active {
   background: rgba(139,92,246,0.08);
   border-color: rgba(139,92,246,0.3);
+  border-left-color: var(--primary);
   transform: translateX(-2px);
 }
-.history-item.active::before { opacity: 1; }
 
 @keyframes slideInItem {
   from { opacity: 0; transform: translateX(12px); }
@@ -623,7 +615,8 @@ body {
   justify-content: space-between;
 }
 
-.history-item-delete {
+.history-item-delete,
+.history-item-edit {
   opacity: 0;
   background: transparent;
   border: none;
@@ -635,8 +628,10 @@ body {
   display: flex;
   align-items: center;
 }
-.history-item:hover .history-item-delete { opacity: 1; }
+.history-item:hover .history-item-delete,
+.history-item:hover .history-item-edit { opacity: 1; }
 .history-item-delete:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
+.history-item-edit:hover   { color: var(--primary); background: rgba(139,92,246,0.1); }
 
 /* ===== BLUR ENGLISH TOGGLE ===== */
 #btnToggleBlur.active {
@@ -663,6 +658,9 @@ body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 .history-item-en {
   font-size: 0.82rem;
@@ -672,6 +670,17 @@ body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Expanded state */
+.history-item.expanded .history-item-vi,
+.history-item.expanded .history-item-en {
+  display: block !important;
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: unset !important;
 }
 
 /* ===== MODAL ===== */
@@ -1337,7 +1346,14 @@ body {
   .history-header { position: relative; padding-top: 24px; }
 
   /* History list */
-  .history-list { padding: 10px 12px; gap: 8px; }
+  .history-list {
+    padding: 12px 12px calc(16px + env(safe-area-inset-bottom));
+    gap: 8px;
+    overflow-x: hidden;
+  }
+
+  /* History item */
+  .history-item { padding: 12px 12px 12px 10px; }
 
   /* Backdrop when bottom sheet open */
   .history-panel.open::before {
