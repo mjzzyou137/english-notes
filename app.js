@@ -38,6 +38,10 @@ let notes       = [];
 let historyOpen = true;
 let searchQuery = '';
 let editingId   = null;
+/** When true, every visible history row is shown in full (not line-clamped). */
+let historyExpandAll = false;
+/** When true, history panel uses full viewport width (desktop) or full height (mobile sheet). */
+let historyFullwidth = false;
 
 /* ===== DOM REFS ===== */
 const appWrapper       = document.querySelector('.app-wrapper');
@@ -64,7 +68,11 @@ const historyList      = document.getElementById('historyList');
 const historyEmpty     = document.getElementById('historyEmpty');
 const historyBadge     = document.getElementById('historyBadge');
 const historySearch    = document.getElementById('historySearch');
-const toast            = document.getElementById('toast');
+const btnExpandHistory      = document.getElementById('btnExpandHistory');
+const btnHistoryPanelExpand = document.getElementById('btnHistoryPanelExpand');
+const btnHistoryZoomIn      = document.getElementById('btnHistoryZoomIn');
+const btnHistoryZoomOut     = document.getElementById('btnHistoryZoomOut');
+const toast                 = document.getElementById('toast');
 
 /* ===== LOADING STATE ===== */
 function setLoading(loading) {
@@ -207,14 +215,44 @@ btnCloseHistory.addEventListener('click',  () => toggleHistory(false));
 
 function isMobile() { return window.innerWidth <= 900; }
 
+const svgHistoryPanelExpand = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+  <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+</svg>`;
+const svgHistoryPanelShrink = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
+  <line x1="14" y1="10" x2="21" y2="3"/><line x1="10" y1="14" x2="3" y2="21"/>
+</svg>`;
+
+function setHistoryFullwidth(on) {
+  historyFullwidth = on;
+  appWrapper.classList.toggle('history-fullwidth', on);
+  if (btnHistoryPanelExpand) {
+    btnHistoryPanelExpand.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btnHistoryPanelExpand.classList.toggle('active', on);
+    btnHistoryPanelExpand.title = on ? 'Show editor side by side' : 'Expand panel';
+    btnHistoryPanelExpand.setAttribute(
+      'aria-label',
+      on ? 'Restore split view with editor' : 'Expand history panel to full width'
+    );
+    btnHistoryPanelExpand.innerHTML = on ? svgHistoryPanelShrink : svgHistoryPanelExpand;
+  }
+}
+
 function toggleHistory(open) {
   historyOpen = open;
+  if (!open) setHistoryFullwidth(false);
   if (isMobile()) {
     historyPanel.classList.toggle('open', open);
   } else {
     appWrapper.classList.toggle('history-hidden', !open);
   }
 }
+
+btnHistoryPanelExpand?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  setHistoryFullwidth(!historyFullwidth);
+});
 
 historyPanel.addEventListener('click', (e) => {
   if (e.target === historyPanel && isMobile()) toggleHistory(false);
@@ -243,6 +281,35 @@ historySearch.addEventListener('input', (e) => {
 });
 
 /* ===== RENDER HISTORY ===== */
+function updateExpandAllButton() {
+  if (!btnExpandHistory) return;
+  const expanded = historyExpandAll;
+  btnExpandHistory.classList.toggle('active', expanded);
+  btnExpandHistory.title = expanded ? 'Collapse all' : 'Expand all';
+  btnExpandHistory.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  btnExpandHistory.innerHTML = expanded
+    ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="7 11 12 6 17 11"/>
+        <polyline points="7 18 12 13 17 18"/>
+      </svg>`
+    : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="7 13 12 18 17 13"/>
+        <polyline points="7 6 12 11 17 6"/>
+      </svg>`;
+}
+
+function applyHistoryExpandAll(expanded) {
+  historyExpandAll = expanded;
+  historyList.querySelectorAll('.history-item').forEach((el) => {
+    el.classList.toggle('expanded', expanded);
+  });
+  updateExpandAllButton();
+}
+
+btnExpandHistory.addEventListener('click', () => {
+  applyHistoryExpandAll(!historyExpandAll);
+});
+
 function renderHistory() {
   const filtered = notes.filter(n => {
     if (!searchQuery) return true;
@@ -252,7 +319,13 @@ function renderHistory() {
 
   historyEmpty.style.display = filtered.length === 0 ? 'flex' : 'none';
   [...historyList.querySelectorAll('.history-item')].forEach(el => el.remove());
-  filtered.forEach((note, idx) => historyList.appendChild(buildHistoryItem(note, idx)));
+  filtered.forEach((note, idx) => {
+    const row = buildHistoryItem(note, idx);
+    if (historyExpandAll) row.classList.add('expanded');
+    historyList.appendChild(row);
+  });
+  if (btnExpandHistory) btnExpandHistory.disabled = filtered.length === 0;
+  updateExpandAllButton();
 }
 
 function buildHistoryItem(note, idx) {
@@ -290,7 +363,10 @@ function buildHistoryItem(note, idx) {
   item.addEventListener('click', (e) => {
     if (e.target.closest('.history-item-delete')) return;
     if (e.target.closest('.history-item-edit')) return;
+    const wasExpanded = item.classList.contains('expanded');
     item.classList.toggle('expanded');
+    if (wasExpanded) historyExpandAll = false;
+    updateExpandAllButton();
   });
 
   // Edit button → load into editor
@@ -414,6 +490,36 @@ importFileInput.addEventListener('change', async (e) => {
     importFileInput.value = '';
   };
   reader.readAsText(file);
+});
+
+/* ===== HISTORY TEXT ZOOM ===== */
+const HISTORY_ZOOM_STEP = 0.1;
+const HISTORY_ZOOM_MIN  = 0.75;
+const HISTORY_ZOOM_MAX  = 1.5;
+let historyTextZoom = 1;
+
+function applyHistoryTextZoom() {
+  historyList.style.setProperty('--history-text-scale', String(historyTextZoom));
+  if (btnHistoryZoomIn) btnHistoryZoomIn.disabled = historyTextZoom >= HISTORY_ZOOM_MAX - 1e-9;
+  if (btnHistoryZoomOut) btnHistoryZoomOut.disabled = historyTextZoom <= HISTORY_ZOOM_MIN + 1e-9;
+}
+
+btnHistoryZoomIn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  historyTextZoom = Math.min(
+    HISTORY_ZOOM_MAX,
+    Math.round((historyTextZoom + HISTORY_ZOOM_STEP) * 100) / 100
+  );
+  applyHistoryTextZoom();
+});
+
+btnHistoryZoomOut?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  historyTextZoom = Math.max(
+    HISTORY_ZOOM_MIN,
+    Math.round((historyTextZoom - HISTORY_ZOOM_STEP) * 100) / 100
+  );
+  applyHistoryTextZoom();
 });
 
 /* ===== BADGE ===== */
@@ -726,4 +832,5 @@ document.addEventListener('keydown', (e) => {
   updateBadge();
   updateCounters();
   renderHistory();
+  applyHistoryTextZoom();
 })();

@@ -103,6 +103,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 28px 0 24px;
 }
 
@@ -110,6 +111,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .brand-icon {
@@ -135,6 +137,13 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.btn-header-icon {
+  flex-shrink: 0;
 }
 
 .btn-history {
@@ -190,6 +199,37 @@ body {
 .app-wrapper.history-hidden .left-col {
   flex: 1;
   width: 100%;
+}
+
+/* Full-width history (click "Saved Notes" title) */
+.app-wrapper.history-fullwidth .left-col {
+  display: none;
+}
+.app-wrapper.history-fullwidth .history-panel {
+  flex: 1 1 100%;
+  width: 100%;
+  max-width: 100%;
+  border-left: none;
+}
+.app-wrapper.history-fullwidth .history-panel-inner {
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  padding: clamp(12px, 2.5vw, 28px) clamp(16px, 5vw, 48px) clamp(20px, 4vw, 40px);
+  box-sizing: border-box;
+}
+.app-wrapper.history-fullwidth .history-header,
+.app-wrapper.history-fullwidth .history-search-wrap {
+  padding-left: 0;
+  padding-right: 0;
+}
+.app-wrapper.history-fullwidth .history-list {
+  padding-left: 0;
+  padding-right: 0;
+}
+.app-wrapper.history-fullwidth .search-icon {
+  left: 14px;
 }
 
 /* ===== EDITOR CARD ===== */
@@ -428,6 +468,15 @@ body {
   box-shadow: -1px 0 0 0 rgba(139,92,246,0.08);
 }
 
+.history-panel-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
 .history-header {
   display: flex;
   align-items: center;
@@ -442,6 +491,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin: 0;
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -465,14 +515,68 @@ body {
   justify-content: center;
   transition: all var(--transition);
 }
+.btn-icon.btn-header-icon {
+  border-radius: 50%;
+}
+
+#btnImport.btn-header-icon {
+  background: rgba(52, 211, 153, 0.14);
+  border-color: rgba(52, 211, 153, 0.4);
+}
+#btnImport.btn-header-icon svg {
+  stroke: #34d399;
+}
+#btnImport.btn-header-icon:hover {
+  background: rgba(52, 211, 153, 0.24);
+  border-color: rgba(52, 211, 153, 0.55);
+}
+#btnImport.btn-header-icon:hover svg {
+  stroke: #6ee7b7;
+}
+
+#btnExport.btn-header-icon {
+  background: rgba(96, 165, 250, 0.14);
+  border-color: rgba(96, 165, 250, 0.4);
+}
+#btnExport.btn-header-icon svg {
+  stroke: #60a5fa;
+}
+#btnExport.btn-header-icon:hover {
+  background: rgba(96, 165, 250, 0.24);
+  border-color: rgba(96, 165, 250, 0.55);
+}
+#btnExport.btn-header-icon:hover svg {
+  stroke: #93c5fd;
+}
+
 .btn-icon:hover {
   background: var(--surface-hover);
   color: var(--text-primary);
   border-color: rgba(255,255,255,0.15);
 }
 .btn-icon:hover svg { stroke: var(--danger); }
+#btnExpandHistory:hover svg { stroke: #a78bfa; }
+#btnHistoryPanelExpand:hover svg { stroke: #a78bfa; }
 #btnImport:hover svg { stroke: #34d399; }
 #btnExport:hover svg { stroke: #60a5fa; }
+
+#btnExpandHistory.active {
+  background: rgba(139,92,246,0.12);
+  border-color: rgba(139,92,246,0.35);
+}
+#btnExpandHistory.active svg { stroke: #a78bfa; }
+
+#btnHistoryPanelExpand.active {
+  background: rgba(139,92,246,0.12);
+  border-color: rgba(139,92,246,0.35);
+}
+#btnHistoryPanelExpand.active svg { stroke: #a78bfa; }
+
+.btn-icon:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 .history-search-wrap {
   position: relative;
@@ -506,6 +610,7 @@ body {
 .history-search::placeholder { color: var(--text-muted); }
 
 .history-list {
+  --history-text-scale: 1;
   flex: 1;
   overflow-y: auto;
   padding: 14px 16px;
@@ -569,7 +674,7 @@ body {
   gap: 12px;
   height: 100%;
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font-size: calc(0.875rem * var(--history-text-scale, 1));
   text-align: center;
   padding: 40px 20px;
 }
@@ -607,7 +712,7 @@ body {
 }
 
 .history-item-time {
-  font-size: 0.72rem;
+  font-size: calc(0.72rem * var(--history-text-scale, 1));
   color: var(--text-muted);
   margin-bottom: 8px;
   display: flex;
@@ -650,7 +755,7 @@ body {
 }
 
 .history-item-vi {
-  font-size: 0.82rem;
+  font-size: calc(0.82rem * var(--history-text-scale, 1));
   color: var(--vi-accent);
   line-height: 1.5;
   margin-bottom: 6px;
@@ -663,7 +768,7 @@ body {
   overflow-wrap: break-word;
 }
 .history-item-en {
-  font-size: 0.82rem;
+  font-size: calc(0.82rem * var(--history-text-scale, 1));
   color: var(--text-secondary);
   line-height: 1.5;
   display: -webkit-box;
@@ -1260,6 +1365,10 @@ body {
   padding: 0 1px;
 }
 
+/* History list text zoom (toolbar buttons) */
+#btnHistoryZoomIn:hover svg,
+#btnHistoryZoomOut:hover svg { stroke: #fbbf24; }
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
 
@@ -1329,6 +1438,13 @@ body {
   .history-panel.open {
     transform: translateY(0);
     box-shadow: 0 -8px 48px rgba(0,0,0,0.5);
+  }
+
+  .app-wrapper.history-fullwidth .history-panel.open {
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
   }
 
   /* Drag handle on bottom sheet */
