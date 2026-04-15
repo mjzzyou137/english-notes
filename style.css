@@ -142,6 +142,13 @@ body {
   flex-shrink: 0;
 }
 
+.header-actions .btn-icon.btn-header-icon {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+}
+
 .btn-header-icon {
   flex-shrink: 0;
 }
@@ -879,8 +886,11 @@ body {
 .btn-practice {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
-  padding: 9px 16px;
+  min-height: 40px;
+  padding: 0 16px;
+  box-sizing: border-box;
   background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.15));
   border: 1px solid rgba(139,92,246,0.3);
   border-radius: 100px;
@@ -1398,7 +1408,9 @@ body {
   }
   .btn-practice,
   .btn-history {
-    padding: 9px 10px;
+    min-height: 40px;
+    padding: 0 10px;
+    box-sizing: border-box;
     gap: 0;
   }
   .history-badge { margin-left: 2px; }
